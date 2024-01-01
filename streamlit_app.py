@@ -1,19 +1,3 @@
-import subprocess
-
-try:
-    import numpy as np
-    import matplotlib.pyplot as plt
-    from matplotlib.patches import Arc
-    from matplotlib.patches import Polygon
-    from matplotlib.colors import Normalize
-    from matplotlib.cm import ScalarMappable
-    from shapely.geometry import Polygon as Poly
-except ImportError as e:
-    missing_module = str(e).split()[-1]  # Extract the missing module name
-    print(f"Installing {missing_module}...")
-    subprocess.run(["pip", "install", missing_module])
-    print(f"{missing_module} installed successfully.")
-
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Arc
@@ -21,6 +5,7 @@ from matplotlib.patches import Polygon
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
 from shapely.geometry import Polygon as Poly
+import streamlit as st
 
 def Wstrs(x):
     m_AB = (yB - yA) / (xB - xA)
@@ -114,7 +99,7 @@ def generate_equidistant_points_in_dam(vertices, pairs_list, distance_between_po
     plt.title('Color Map for Result Array')
 
 # Streamlit app
-st.title("Embankment dam analysis")
+st.title("Embankment dam with core analysis")
 Core_on = st.sidebar.toggle('Core')
 
 # **********************************************************************
