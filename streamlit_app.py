@@ -96,7 +96,6 @@ def generate_equidistant_points_in_dam(vertices, pairs_list, distance_between_po
 
     plt.scatter(equidistant_points_u[:, 0], equidistant_points_u[:, 1], c=normalized_result)
     plt.colorbar(sm, label='Result Values', ax=ax)
-    plt.title('Color Map for Result Array')
 
 # Streamlit app
 st.title("Embankment dam with core analysis")
@@ -110,7 +109,7 @@ dam = np.array([(2, 0), (7, 8), (9, 8.1), (14, 0)])
 core = np.array([(5, 0), dam[1], dam[-2], (11, 0)])
 soil = np.array([(0, -1), (0, 0), (15, 0), (15, -1)])
 
-# **********************************************************************
+# ********************************************************************** SideBar
 
 # Sidebar with input elements
 st.sidebar.header("Input Parameters")
@@ -118,33 +117,34 @@ st.sidebar.header("Input Parameters")
 # Water Height
 H = st.sidebar.slider("Water Height", min_value=dam[0,1], max_value=dam[2,1], value=7.0)
 
-# Rest of your code...
-
 
 # Gamma
-gamma = st.sidebar.number_input("Gamma", value=gamma)
+gamma = st.sidebar.number_input("γ", value=gamma)
 
 # Dam Coordinates
 with st.sidebar.expander("Dam Coordinates"):
-    for i in range(len(dam)):
+    col1, col2 = st.columns(2)
+    dam[0][0] = col1.number_input(f"X1", key=f"dam_px_1", value=dam[0][0], step=1.0)
+    for i in range(1, len(dam) - 1):  
         col1, col2 = st.columns(2)
-        dam[i][0] = col1.number_input(f"Px{i+1}", key=f"dam_px_{i+1}", value=dam[i][0], step=1.0)
-        dam[i][1] = col2.number_input(f"Py{i+1}", key=f"dam_py_{i+1}", value=dam[i][1], step=1.0)
+        dam[i][0] = col1.number_input(f"X{i+1}", key=f"dam_px_{i+1}", value=dam[i][0], step=1.0)
+        dam[i][1] = col2.number_input(f"Y{i+1}", key=f"dam_py_{i+1}", value=dam[i][1], step=1.0)
+    dam[-1][0] = col1.number_input(f"X{len(dam)}", key=f"dam_px_{len(dam)}", value=dam[-1][0], step=1.0)
 
 # Core Coordinates
 if Core_on : 
     with st.sidebar.expander("Core Coordinates"):
         for i in range(len(core)):
             col1, col2 = st.columns(2)
-            core[i][0] = col1.number_input(f"Px{i+1}", key=f"core_px_{i+1}", value=core[i][0], step=1.0)
-            core[i][1] = col2.number_input(f"Py{i+1}", key=f"core_py_{i+1}", value=core[i][1], step=1.0)
+            core[i][0] = col1.number_input(f"X{i+1}", key=f"core_px_{i+1}", value=core[i][0], step=1.0)
+            core[i][1] = col2.number_input(f"Y{i+1}", key=f"core_py_{i+1}", value=core[i][1], step=1.0)
 
 # Soil Coordinates
 with st.sidebar.expander("Soil Coordinates"):
     for i in range(len(soil)):
         col1, col2 = st.columns(2)
-        soil[i][0] = col1.number_input(f"Px{i+1}", key=f"soil_px_{i+1}", value=soil[i][0], step=1)
-        soil[i][1] = col2.number_input(f"Py{i+1}", key=f"soil_py_{i+1}", value=soil[i][1], step=1)
+        soil[i][0] = col1.number_input(f"X{i+1}", key=f"soil_px_{i+1}", value=soil[i][0], step=1)
+        soil[i][1] = col2.number_input(f"Y{i+1}", key=f"soil_py_{i+1}", value=soil[i][1], step=1)
 
     # Add new point button
     if st.button("Add New Point to Soil"):
@@ -152,22 +152,25 @@ with st.sidebar.expander("Soil Coordinates"):
         new_point_y = st.number_input("New Point - Y", step=1)
         soil = np.vstack([soil, [new_point_x, new_point_y]])
 
+m_soil = (soil[1][1]-soil[-2][1])/(soil[1][0]-soil[-2][0])
+st.write(m_soil)
+dam[0][1] = m_soil*(dam[0][0]-soil[1][0])+soil[1][1]
+dam[-1][1] = m_soil*(dam[-1][0]-soil[1][0])+soil[1][1]
+
+
 
 # **********************************************************************
 
 # Coordinates of A, B, C and O
-#xA, yA = np.float64(dam[3][0]), np.float64(-1.3)
-xA, yA = np.float64(dam[3][0]), np.float64(0)
-#xB, yB = np.float64(13.1), np.float64(-1.3)
-xB, yB = np.float64(13.1), np.float64(0)
-#xC, yC = np.float64(dam[2][0]), np.float64(-1.3) #np.float64(5), np.float64(1.3)
-xC, yC = np.float64(dam[2][0]), np.float64(0)
+xA, yA = np.float64(dam[-1][0]), np.float64(dam[-1][1])
+xB, yB = xA-1, m_soil*(xA-1-soil[1][0])+soil[1][1]
+xC, yC = np.float64(dam[2][0]), m_soil*(np.float64(dam[2][0])-soil[1][0])+soil[1][1]
 xO, yO = np.float64(12), np.float64(8)
 
 E = ((dam[1][0]-dam[0][0])*( H - dam[0][1] + dam[0][0]*(dam[1][1]-dam[0][1])/(dam[1][0]-dam[0][0]))/(dam[1][1]-dam[0][1]), H)
 
 # Points coordinates
-water = np.array([(0, 0), dam[0], E, (0, E[1])])
+water = np.array([soil[1], dam[0], E, (0, E[1])])
 
 z = np.linspace(0, H, 1000)
 H = water[2][1]
@@ -181,10 +184,8 @@ if not Core_on: z0 = np.sqrt(np.abs(y5**2 + H**2)) - y5
 y6 = y4-z0/2-Kozeny(z, z0)[0]
 z = np.linspace(0, H, 1000)
 
-st.write(z0, y5, H, Kozeny(y5, z0))
-
 bande_1=np.array([  (core[0,0]-(core[1][0]-core[0][0])*( H - core[0][1] + core[0][0]*(core[1][1]-core[0][1])/(core[1][0]-core[0][0]))/(core[1][1]-core[0][1])+y5, 0),\
-    (core[0,0],0),core[1],E])
+    (core[0,0],0),core[1],core[1]-0.5])
 
 bande_2=np.array([(core[-1,0],0),(core[-1,0]+(core[1][0]-core[0][0])*( H - core[0][1] + core[0][0]*(core[1][1]-core[0][1])/(core[1][0]-core[0][0]))/(core[1][1]-core[0][1])-y5, 0),\
     ((core[-1][0]-core[-2][0])*( H - core[-2][1] + core[-2][0]*(core[-1][1]-core[-2][1])/(core[-1][0]-core[-2][0]))/(core[-1][1]-core[-2][1])+(core[1][0]-core[0][0])*( H - core[0][1] +\
@@ -200,9 +201,9 @@ ax.add_patch(Polygon(soil, closed=True, facecolor='brown', alpha=0.9, label='Soi
 ax.add_patch(Polygon(water, closed=True, facecolor='lightblue', alpha=0.5, label='Water'))
 ax.add_patch(Polygon(dam, closed=True, facecolor='gray', alpha=0.7, label='Dam'))
 if Core_on : ax.add_patch(Polygon(core, closed=True, facecolor='brown', alpha=.5, label='Core'))
-if Core_on : ax.add_patch(Polygon(bande_1, closed=True, facecolor='orange', alpha=1, label='Core'))
-if Core_on : ax.add_patch(Polygon(bande_2, closed=True, facecolor='orange', alpha=1, label='Core'))
-if Core_on : ax.add_patch(Polygon(bande_3, closed=True, facecolor='orange', alpha=1, label='Core'))
+if Core_on : ax.add_patch(Polygon(bande_1, closed=True, facecolor='orange', alpha=1, label='Chimney'))
+if Core_on : ax.add_patch(Polygon(bande_2, closed=True, facecolor='orange', alpha=1))
+if Core_on : ax.add_patch(Polygon(bande_3, closed=True, facecolor='orange', alpha=1))
 
 #------------------------------
 
@@ -278,7 +279,6 @@ if Core_on :
     x_cor, y_cor = zip(*filtered_pairs)
     ax.plot(x_cor, y_cor, color="lightblue")
 
-
 elif not Core_on:
     pairs_list = np.array(list(zip(dam[-1][0]-z0/2 - Kozeny(z, z0), z)))
     filtered_pairs = np.array(list(filter(lambda x: y5 <= x[0] <= L[0], pairs_list)))[::-1]
@@ -309,9 +309,6 @@ ax.scatter([xO], [yO], color='black')
 ax.scatter([xT], [yT], color='purple')
 
 # Add annotations
-ax.annotate('A', (xA, yA), textcoords="offset points", xytext=(0,-15), ha='center', color='blue', zorder=50)
-ax.annotate('B', (xB, yB), textcoords="offset points", xytext=(-4,5), ha='center', color='blue', zorder=50)
-ax.annotate('C', (xC, yC), textcoords="offset points", xytext=(0,10), ha='center', color='blue', zorder=50)
 ax.annotate('S', (xS, yS), textcoords="offset points", xytext=(10,-15), ha='center', color='red', zorder=50)
 ax.annotate('E', (xE, yE), textcoords="offset points", xytext=(0,-15), ha='center', color='green', zorder=50)
 ax.annotate('M', (xM, yM), textcoords="offset points", xytext=(0,10), ha='center', color='orange', zorder=50)
@@ -335,9 +332,6 @@ ax.axvline(y1, color='pink', linestyle='--')
 ax.axvline(y5 - b_prime*0.3, color='pink', linestyle='--')
 ax.axvline(y6, color='pink', linestyle='--')
 ax.axvline(y5 - b_prime*0.3 - z0, color='pink', linestyle='--')
-
-ax.plot([xA, xB], [yA, yB], color='blue')
-ax.plot([xB, xC], [yB, yC], color='blue')
 
 # Flatten the meshgrid
 x_O = np.meshgrid(np.linspace(12, 25, 20), np.linspace(8, 21, 20))[0].ravel()
@@ -370,9 +364,9 @@ gamma_ = rho * g
 W = A * gamma_
 
 # Input fields
-rho_ = st.sidebar.number_input("Rho", value=rho, step=0.01)
-c_prime = st.sidebar.text_input("c_prime", value=','.join(map(str, c_prime)))
-phi_prime = st.sidebar.text_input("phi_prime", value=','.join(map(str, phi_prime)))
+rho_ = st.sidebar.number_input("ρ", value=rho, step=0.01)
+c_prime = st.sidebar.text_input("c'", value=','.join(map(str, c_prime)))
+phi_prime = st.sidebar.text_input("ϕ'", value=','.join(map(str, phi_prime)))
 
 # Convert input values to appropriate types
 rho = rho_
